@@ -24,6 +24,8 @@ Las reglas de ponderación, aprobación y acceso son supuestos explícitos porqu
 
 ## Estructura MVC
 
+La interfaz utiliza Bootstrap 5.3.3, incluido localmente: rejilla responsive (`row`, `col-md-*`, `col-lg-*`), navegación (`nav`, `nav-pills`, `nav-link`), tarjetas (`card`, `shadow-sm`), formularios (`form-control`, `form-check`), botones (`btn`), alertas (`alert`), estados (`badge`, `text-bg-success`, `text-bg-danger`) y tabla adaptable (`table-responsive`, `table-striped`, `table-hover`). `styles.css` personaliza colores y espaciado. Estos componentes son de CSS y no requieren JavaScript de Bootstrap.
+
 - `src/main/java/pe/edu/utp/model/Producto.java`: modelo con getters para EL.
 - `src/main/java/pe/edu/utp/controller/LaboratorioServlet.java`: controlador, validaciones y atributos del request.
 - `src/main/webapp/WEB-INF/views/`: JSP privados y fragmentos compartidos.
