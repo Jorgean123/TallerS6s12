@@ -1,0 +1,4 @@
+/target/
+/.dependencies/
+/qa/
+/node_modules/

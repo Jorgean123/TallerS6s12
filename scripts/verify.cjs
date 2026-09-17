@@ -1,0 +1,42 @@
+const fs = require('fs');
+const assert = require('node:assert/strict');
+const base = 'http://localhost:8081/TallerS6s12';
+let count = 0;
+async function check(path, data, expected, status=200) {
+  const r = await fetch(base+path, data ? {method:'POST',body:new URLSearchParams(data)} : {});
+  const text = await r.text();
+  assert.equal(r.status,status,`${path}: status`);
+  for(const fragment of expected) assert.ok(text.includes(fragment),`${path}: falta ${fragment}`);
+  assert.ok(!text.includes('jakarta.servlet.ServletException'));
+  count++; console.log(`OK ${count}: ${path} ${data ? JSON.stringify(data) : 'GET'}`);
+  return text;
+}
+(async()=>{
+  for (const route of ['/','/inicio','/promedio','/catalogo','/acceso','/assets/bootstrap.min.css','/assets/styles.css']) await check(route,null,[]);
+  await check('/promedio',{nota1:'16',nota2:'15',nota3:'18'},['16.50','Aprobado']);
+  await check('/promedio',{nota1:'0',nota2:'0',nota3:'0'},['0.00','Desaprobado']);
+  await check('/promedio',{nota1:'20',nota2:'20',nota3:'20'},['20.00','Aprobado']);
+  await check('/promedio',{nota1:'13',nota2:'13',nota3:'13'},['13.00','Aprobado']);
+  await check('/promedio',{nota1:'12.99',nota2:'13',nota3:'13'},['13.00','Desaprobado']);
+  for(const bad of ['-1','21','NaN','Infinity','abc','12.123','', '<script>']) await check('/promedio',{nota1:bad,nota2:'15',nota3:'18'},['Revisa los datos'],400);
+  await check('/promedio',{nota1:'15'},['Revisa los datos'],400);
+  const catalog = await check('/catalogo',null,['6 productos','Agotado','Disponible','TEC-006']);
+  assert.equal((catalog.match(/class="product-code"/g)||[]).length,6);
+  await check('/acceso',{nombre:'Jorge Eduardo Acosta Loyola',edad:'22',matricula:'si'},['Acceso permitido','Jorge Eduardo Acosta Loyola']);
+  await check('/acceso',{nombre:'Jorge',edad:'18',matricula:'si'},['Acceso permitido']);
+  await check('/acceso',{nombre:'Jorge',edad:'17',matricula:'si'},['Acceso denegado','Debes tener al menos 18']);
+  await check('/acceso',{nombre:'Jorge',edad:'22'},['Acceso denegado','Debes contar con matrícula']);
+  await check('/acceso',{nombre:'Jorge',edad:'17'},['Acceso denegado','Debes tener al menos 18','Debes contar con matrícula']);
+  for(const edad of ['-1','121','18.5','abc','']) await check('/acceso',{nombre:'Jorge',edad},['Revisa los datos'],400);
+  await check('/acceso',{nombre:' ',edad:'22'},['Revisa los datos'],400);
+  const escaped = await check('/acceso',{nombre:'<script>alert(1)</script>',edad:'22',matricula:'si'},['&lt;script&gt;']);
+  assert.ok(!escaped.includes('<script>alert(1)</script>'));
+  await check('/WEB-INF/views/catalogo.jsp',null,[],404);
+  const dir = 'src/main/webapp/WEB-INF/views';
+  for(const name of fs.readdirSync(dir)) assert.ok(!/<%(?!@|--)/.test(fs.readFileSync(`${dir}/${name}`,'utf8')),`${name}: scriptlet`);
+  const ficha = fs.readFileSync('entregables/Ficha_S6_S12.html', 'utf8');
+  new Function(ficha.match(/<script>([\s\S]*?)<\/script>/)[1]);
+  assert.equal((ficha.match(/class="evidence"/g)||[]).length, 3);
+  console.log('Ficha: JavaScript válido y tres espacios de evidencia.');
+  console.log(`Resultado: ${count} solicitudes verificadas; 6 filas de catálogo; escape XSS y ausencia de scriptlets correctos.`);
+})().catch(e=>{console.error(e);process.exit(1)});
